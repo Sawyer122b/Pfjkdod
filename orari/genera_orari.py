@@ -78,8 +78,9 @@ def risolvi():
                     ammesso = (t[0][0] >= 10 and t[-1][1] <= 20 and
                                (ore_t == 9 if intera else 4 <= ore_t <= 6 and
                                 (t[0][1] <= 15 or t[0][0] >= 14)))
-                elif ore == 24:
-                    ammesso = not intera and ore_t >= 5
+                elif ore == 24:  # il sabato giornata lunga, gli altri giorni 5-6h filate
+                    ammesso = (intera and 7 <= ore_t <= 8 and min(e - s for s, e in t) >= 3) \
+                        if d == 5 else (not intera and ore_t >= 5)
                 else:  # giornata intera spezzata 9-10h oppure mezza giornata 4-6h
                     ammesso = (9 <= ore_t <= 10 and min(e - s for s, e in t) >= 3) if intera \
                         else 4 <= ore_t <= 6
@@ -105,6 +106,9 @@ def risolvi():
             continue
         m.Add(lavora[p, 5] == 1)  # sabato lavorano tutti
         intere = sum(v for (q, d, i), v in x.items() if q == p and len(T[i]) == 2)
+        if ore >= 30:  # sabato giornata intera per tutti
+            m.Add(sum(v for (q, d, i), v in x.items()
+                      if q == p and d == 5 and len(T[i]) == 2) == 1)
         if nome in MEZZE:
             m.Add(intere == 5 - MEZZE[nome])
         if nome == "BRUNI LAURA":  # alternare mattine e pomeriggi
@@ -141,6 +145,10 @@ def risolvi():
             manca = m.NewIntVar(0, 1, "")
             m.Add(manca >= 2 - rep)
             obj.append(100 * manca)
+            # il terzo addetto di reparto serve soprattutto di pomeriggio
+            manca3 = m.NewIntVar(0, 2, "")
+            m.Add(manca3 >= 3 - rep)
+            obj.append((10 if h >= 15 else 1) * manca3)
             cas = presenti(d, h, lambda q: q[1] == "Cassiera")
             extra = m.NewIntVar(0, 5, "")
             m.Add(extra >= cas - 2)
@@ -176,3 +184,7 @@ if __name__ == "__main__":
             1 for nome, ruolo, *_ in PERSONE if ruolo in REPARTO and d in piano[nome]
             and copre(piano[nome][d], h)) < 2]
         print(GIORNI[d], [f"{h}-{h+1}" for h in buchi])
+    print("\nAddetti di reparto ora per ora (9..20):")
+    for d in range(7):
+        print(f"{GIORNI[d][:10]:11}", [sum(1 for nome, ruolo, *_ in PERSONE if ruolo in REPARTO
+              and d in piano[nome] and copre(piano[nome][d], h)) for h in ORE])
