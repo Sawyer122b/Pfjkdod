@@ -21,6 +21,9 @@ PERSONE = [
     ("PELLEGRINI GIORGIA", "Cassiera", 24, False, None),
     ("DIANA LUIGI", "Magazziniere", 40, False, None),
 ]
+# mezze giornate a settimana (gli altri giorni lavorati sono giornate intere)
+MEZZE = {"DE SANTIS MIRKO": 1, "CILIANI ANDREA": 2, "DI ERASMO GABRIELE": 2,
+         "GERMANO ALESSANDRO": 2, "PROIETTI BENEDETTA": 2}
 REPARTO = {"Addetto vendite", "Vicedirettore"}
 
 
@@ -68,14 +71,18 @@ def risolvi():
     for p, (nome, ruolo, ore, chiavi, prec) in enumerate(PERSONE):
         for d in range(7):
             for i, t in enumerate(T):
+                ore_t, intera = ore_turno(t), len(t) == 2
                 if ruolo == "Magazziniere":
                     ammesso = d < 5 and t == ((9, 13), (14, 18))
-                elif nome == "BRUNI LAURA":  # niente apertura/chiusura, giornate corte
-                    ammesso = t[0][0] >= 10 and t[-1][1] <= 20 and ore_turno(t) <= 6
+                elif nome == "BRUNI LAURA":  # niente apertura/chiusura
+                    ammesso = (t[0][0] >= 10 and t[-1][1] <= 20 and
+                               (ore_t == 9 if intera else 4 <= ore_t <= 6 and
+                                (t[0][1] <= 15 or t[0][0] >= 14)))
                 elif ore == 24:
-                    ammesso = len(t) == 1 and ore_turno(t) >= 5
-                else:
-                    ammesso = 7 <= ore_turno(t) <= 10
+                    ammesso = not intera and ore_t >= 5
+                else:  # giornata intera spezzata 9-10h oppure mezza giornata 4-6h
+                    ammesso = (9 <= ore_t <= 10 and min(e - s for s, e in t) >= 3) if intera \
+                        else 4 <= ore_t <= 6
                 if ammesso:
                     x[p, d, i] = m.NewBoolVar(f"x{p}_{d}_{i}")
     lavora = {}
@@ -97,6 +104,18 @@ def risolvi():
                 m.Add(lavora[p, d] == 1)
             continue
         m.Add(lavora[p, 5] == 1)  # sabato lavorano tutti
+        intere = sum(v for (q, d, i), v in x.items() if q == p and len(T[i]) == 2)
+        if nome in MEZZE:
+            m.Add(intere == 5 - MEZZE[nome])
+        if nome == "BRUNI LAURA":  # alternare mattine e pomeriggi
+            for cond in (lambda t: t[0][1] <= 15, lambda t: t[0][0] >= 14):
+                m.Add(sum(v for (q, d, i), v in x.items()
+                          if q == p and len(T[i]) == 1 and cond(T[i])) >= 1)
+            pomeriggi = sum(v for (q, d, i), v in x.items()
+                            if q == p and len(T[i]) == 1 and T[i][0][0] >= 14)
+            mattine = sum(v for (q, d, i), v in x.items()
+                          if q == p and len(T[i]) == 1 and T[i][0][1] <= 15)
+            m.Add(pomeriggi - mattine <= 1); m.Add(mattine - pomeriggi <= 1)
         if prec is not None:
             coppie = coppie_riposo(prec)
             scelta = [m.NewBoolVar("") for _ in coppie]
