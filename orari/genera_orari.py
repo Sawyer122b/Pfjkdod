@@ -118,6 +118,10 @@ def risolvi():
             m.Add(tot >= 44); m.Add(tot <= 45)
         else:
             m.Add(tot == ore)
+        # domenica niente mezze giornate (o intera o riposo)
+        for (q, d, i), v in x.items():
+            if q == p and d == 6 and len(T[i]) == 1:
+                m.Add(v == 0)
         # sabato giornata intera per tutti
         m.Add(sum(v for (q, d, i), v in x.items() if q == p and d == 5 and len(T[i]) == 2) == 1)
         if nome in MEZZE:
