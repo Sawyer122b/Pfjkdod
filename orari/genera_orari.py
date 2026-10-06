@@ -69,15 +69,26 @@ def copre(t, h):
     return any(s <= h < e for s, e in t)
 
 
-def penalita_riposi(a, b, prec):
-    """Quante regole sui riposi viola la coppia (a, b): stesso giorno della settimana
-    scorsa, riposi attaccati o troppo distanti (oltre 5 giorni)."""
+# chi ha lavorato domenica 11 ottobre (questa domenica riposa, gli altri lavorano)
+DOMENICA_PREC = {"BRUNI LAURA", "DE SANTIS MIRKO", "PROIETTI BENEDETTA",
+                 "GERMANO ALESSANDRO", "PRESTI DEBORA"}
+
+
+def penalita_riposi(a, b, prec, nome=None):
+    """Quante regole sui riposi viola la coppia (a, b): riposi troppo vicini (meno di 3
+    giorni) o troppo distanti, anche rispetto alla settimana scorsa, domenica non alternata."""
     pen = 0
-    if not 2 <= b - a <= 5:
+    if b - a < 3:
+        pen += 2 * (3 - (b - a))  # attaccati = 4, un giorno in mezzo = 2
+    elif b - a > 5:
         pen += 1
+    if nome is not None and (6 in (a, b)) != (nome in DOMENICA_PREC):
+        pen += 30
     if prec:
-        pen += (a in prec) + (b in prec)
-        if not 2 <= (a + 7) - max(prec) <= 5:
+        gap = (a + 7) - max(prec)
+        if gap < 2:
+            pen += 4
+        elif gap > 5:
             pen += 1
     return pen
 
@@ -138,7 +149,7 @@ def risolvi():
         m.AddExactlyOne(scelta)
         for d in range(7):
             m.Add(lavora[p, d] == 1 - sum(s for s, c in zip(scelta, coppie) if d in c))
-        obj += [60 * penalita_riposi(a, b, prec) * s for s, (a, b) in zip(scelta, coppie)]
+        obj += [40 * penalita_riposi(a, b, prec, nome) * s for s, (a, b) in zip(scelta, coppie)]
 
     def presenti(d, h, filtro):
         return sum(v for (p, dd, i), v in x.items()
@@ -185,7 +196,7 @@ if __name__ == "__main__":
         if nome in FISSI:
             continue
         a, b = [d for d in range(7) if d not in piano[nome]]
-        print(f"{nome:20} {GIORNI[a][:3]} {GIORNI[b][:3]}  violazioni={penalita_riposi(a, b, prec)}")
+        print(f"{nome:20} {GIORNI[a][:3]} {GIORNI[b][:3]}  violazioni={penalita_riposi(a, b, prec, nome)}")
     print("\nAddetti di reparto ora per ora (9..20):")
     for d in range(7):
         print(f"{GIORNI[d][:10]:11}", [sum(1 for nome, ruolo, *_ in PERSONE if ruolo in REPARTO
