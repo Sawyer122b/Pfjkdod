@@ -13,7 +13,7 @@ ORE = range(9, 21)  # slot orari [h, h+1), negozio aperto 9-21
 
 # nome, ruolo, ore settimanali, chiavi, riposi settimana precedente (0=lun..6=dom)
 PERSONE = [
-    ("LATINI ALESSANDRO", "Addetto vendite", 40, False, None),
+    ("BRUNI LAURA", "Addetto vendite", 30, False, (2, 4)),
     ("DE SANTIS MIRKO", "Vicedirettore", 44, True, (0, 3)),
     ("CILIANI ANDREA", "Addetto vendite", 40, True, (1, 6)),
     ("DI ERASMO GABRIELE", "Addetto vendite", 40, False, (0, 6)),
@@ -37,7 +37,7 @@ FISSI = {
 }
 # mezze giornate a settimana (gli altri giorni lavorati sono giornate intere)
 MEZZE = {"DE SANTIS MIRKO": 1, "CILIANI ANDREA": 2, "DI ERASMO GABRIELE": 2,
-         "GERMANO ALESSANDRO": 2, "LATINI ALESSANDRO": 2}
+         "GERMANO ALESSANDRO": 2}
 REPARTO = {"Addetto vendite", "Vicedirettore"}
 
 
@@ -91,6 +91,10 @@ def risolvi():
             for i, t in enumerate(T):
                 if nome in FISSI:
                     ammesso = FISSI[nome].get(d) == t
+                elif nome == "BRUNI LAURA":  # niente apertura/chiusura, mattine o pomeriggi
+                    ammesso = t[0][0] >= 10 and t[-1][1] <= 20 and (
+                        ore_turno(t) == 9 if len(t) == 2 else
+                        4 <= ore_turno(t) <= 6 and (t[0][1] <= 15 or t[0][0] >= 14))
                 elif len(t) == 2:  # giornata intera spezzata 9-10h
                     ammesso = 9 <= ore_turno(t) <= 10 and min(e - s for s, e in t) >= 3
                 else:  # mezza giornata 4-6h
@@ -116,7 +120,15 @@ def risolvi():
             m.Add(tot == ore)
         # sabato giornata intera per tutti
         m.Add(sum(v for (q, d, i), v in x.items() if q == p and d == 5 and len(T[i]) == 2) == 1)
-        m.Add(sum(v for (q, d, i), v in x.items() if q == p and len(T[i]) == 2) == 5 - MEZZE[nome])
+        if nome in MEZZE:
+            m.Add(sum(v for (q, d, i), v in x.items() if q == p and len(T[i]) == 2)
+                  == 5 - MEZZE[nome])
+        if nome == "BRUNI LAURA":  # alternare mattine e pomeriggi
+            mezze = [(T[i], v) for (q, d, i), v in x.items() if q == p and len(T[i]) == 1]
+            mattine = sum(v for t, v in mezze if t[0][1] <= 15)
+            pomeriggi = sum(v for t, v in mezze if t[0][0] >= 14)
+            m.Add(mattine >= 1); m.Add(pomeriggi >= 1)
+            m.Add(pomeriggi - mattine <= 1); m.Add(mattine - pomeriggi <= 1)
         coppie = list(combinations([0, 1, 2, 3, 4, 6], 2))
         scelta = [m.NewBoolVar("") for _ in coppie]
         m.AddExactlyOne(scelta)
