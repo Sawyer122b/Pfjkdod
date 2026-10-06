@@ -79,7 +79,8 @@ r_last = r0 + len(PERSONE) - 1
 note = [
     "🔑 = ha le chiavi (apre/chiude). Ogni giorno un tesserato apre alle 9:00 e uno chiude alle 21:00.",
     "Riposi spostati rispetto alla settimana 5-11 ottobre: mai lo stesso giorno, distanza tra un riposo e l'altro da 2 a 5 giorni.",
-    "Laura Bruni: turni continuati di 6 ore, mai in apertura o chiusura. Luigi Diana: lun-ven 9-13 / 14-18, sabato e domenica a casa.",
+    "Orari delle casse (Benedetta, Martina, Debora, Giorgia) presi dal foglio del negozio; Luigi Diana lun-ven 9-13 / 14-18.",
+    "Sabato giornata intera per tutto il reparto; il terzo addetto di reparto messo di preferenza al pomeriggio.",
     "Il foglio 'Copertura' conta ora per ora quante persone ci sono (si aggiorna da solo se modifichi gli orari).",
 ]
 for i, t in enumerate(note):
